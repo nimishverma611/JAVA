@@ -1,0 +1,193 @@
+Part (a): Dependency Injection in Spring Using Java-Based Configuration
+
+Objective:
+Use Spring’s Dependency Injection (DI) with Java-based configuration (no XML).
+
+Steps to Implement:
+
+Create Course class
+
+public class Course {
+    private String courseName;
+
+    public Course(String courseName) {
+        this.courseName = courseName;
+    }
+
+    public String getCourseName() {
+        return courseName;
+    }
+}
+
+
+Create Student class (depends on Course)
+
+public class Student {
+    private Course course;
+
+    public Student(Course course) {
+        this.course = course;
+    }
+
+    public void displayInfo() {
+        System.out.println("Enrolled in course: " + course.getCourseName());
+    }
+}
+
+
+Create Java-based Spring configuration class
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class AppConfig {
+    @Bean
+    public Course course() {
+        return new Course("Spring and Hibernate");
+    }
+
+    @Bean
+    public Student student() {
+        return new Student(course());
+    }
+}
+
+
+Main class to run the app
+
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+public class MainApp {
+    public static void main(String[] args) {
+        AnnotationConfigApplicationContext context =
+            new AnnotationConfigApplicationContext(AppConfig.class);
+
+        Student student = context.getBean(Student.class);
+        student.displayInfo();
+
+        context.close();
+    }
+}
+
+
+
+
+Part (b): Hibernate Application for Student CRUD Operations
+
+Objective:
+Perform Create, Read, Update, Delete (CRUD) operations on a Student entity using Hibernate.
+
+Steps to Implement:
+
+Student Entity
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "students")
+public class Student {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int id;
+
+    @Column(name = "name")
+    private String name;
+
+    @Column(name = "course")
+    private String course;
+
+    // Constructors, getters, setters
+}
+
+
+Hibernate Configuration (hibernate.cfg.xml)
+
+<!DOCTYPE hibernate-configuration PUBLIC "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+    "http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd">
+<hibernate-configuration>
+    <session-factory>
+        <property name="hibernate.connection.driver_class">com.mysql.cj.jdbc.Driver</property>
+        <property name="hibernate.connection.url">jdbc:mysql://localhost:3306/springdb</property>
+        <property name="hibernate.connection.username">root</property>
+        <property name="hibernate.connection.password">yourpassword</property>
+        <property name="hibernate.dialect">org.hibernate.dialect.MySQLDialect</property>
+        <property name="hibernate.hbm2ddl.auto">update</property>
+        <mapping class="com.example.Student"/>
+    </session-factory>
+</hibernate-configuration>
+
+
+CRUD Operations Example
+
+import org.hibernate.*;
+import org.hibernate.cfg.Configuration;
+
+public class StudentCRUD {
+    public static void main(String[] args) {
+        SessionFactory factory = new Configuration().configure().buildSessionFactory();
+        Session session = factory.openSession();
+        Transaction tx = session.beginTransaction();
+
+        // Create
+        Student s1 = new Student();
+        s1.setName("Harshita");
+        s1.setCourse("Java");
+        session.save(s1);
+
+        // Read
+        Student s2 = session.get(Student.class, 1);
+        System.out.println("Fetched: " + s2.getName());
+
+        // Update
+        s2.setCourse("Spring Boot");
+        session.update(s2);
+
+        // Delete
+        session.delete(s2);
+
+        tx.commit();
+        session.close();
+    }
+}
+
+
+Part (c): Transaction Management Using Spring + Hibernate
+
+Objective:
+Simulate a bank transfer system ensuring atomic transactions using @Transactional.
+
+Steps:
+
+Entities
+
+Account → represents a user account with balance.
+
+Transaction → logs money transfers.
+
+Service Layer
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class BankService {
+    @Transactional
+    public void transferMoney(int fromAccId, int toAccId, double amount) {
+        Account from = accountDao.getAccount(fromAccId);
+        Account to = accountDao.getAccount(toAccId);
+
+        from.setBalance(from.getBalance() - amount);
+        to.setBalance(to.getBalance() + amount);
+
+        accountDao.updateAccount(from);
+        accountDao.updateAccount(to);
+    }
+}
+
+
+Spring Configuration
+
+Use @EnableTransactionManagement and a Hibernate SessionFactory bean.
+
+Ensure a rollback happens automatically if any exception occurs.
